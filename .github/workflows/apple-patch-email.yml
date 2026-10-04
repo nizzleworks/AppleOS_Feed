@@ -1,0 +1,34 @@
+name: Apple patch status email
+
+on:
+  workflow_dispatch: {}   # "Run workflow" button for testing / ad-hoc runs
+
+permissions:
+  contents: write   # lets the job commit the finished email back to the repo
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build email from SOFA
+        env:
+          TZ: America/New_York
+        run: |
+          python3 scripts/sofa_apple_patch_email.py --out out | tee build.log
+          mkdir -p latest
+          cp out/apple_patch_email.html latest/apple_patch_email.html
+          head -n1 build.log > latest/subject.txt
+
+      - name: Commit to latest/
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add latest/
+          git commit -m "Apple patch email $(date +%Y-%m-%d)" || echo "No changes"
+          git push
